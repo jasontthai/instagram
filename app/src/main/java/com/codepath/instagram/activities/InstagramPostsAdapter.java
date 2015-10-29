@@ -1,7 +1,10 @@
 package com.codepath.instagram.activities;
 
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
 import android.net.Uri;
+import android.provider.MediaStore;
 import android.support.v7.widget.RecyclerView;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
@@ -9,17 +12,22 @@ import android.text.format.DateUtils;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.TypefaceSpan;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.codepath.instagram.R;
 import com.codepath.instagram.helpers.Utils;
+import com.codepath.instagram.models.InstagramComment;
 import com.codepath.instagram.models.InstagramPost;
-import com.facebook.drawee.backends.pipeline.Fresco;
 import com.facebook.drawee.view.SimpleDraweeView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by trit on 10/26/15.
@@ -44,8 +52,8 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
     }
 
     @Override
-    public void onBindViewHolder(InstagramPostsViewHolder holder, int position) {
-        InstagramPost post = posts.get(position);
+    public void onBindViewHolder(final InstagramPostsViewHolder holder, int position) {
+        final InstagramPost post = posts.get(position);
 
         holder.tvUserName.setText(post.user.userName);
 
@@ -71,6 +79,76 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
         holder.ivAvatar.setImageURI(Uri.parse(post.user.profilePictureUrl));
         holder.ivImage.setImageURI(Uri.parse(post.image.imageUrl));
         holder.ivImage.setAspectRatio((float) post.image.imageWidth / post.image.imageHeight);
+        holder.tvCommentsCount.setText("View all " + post.commentsCount + " comments");
+        holder.tvCommentsCount.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent i = new Intent(context, CommentsActivity.class);
+                i.putExtra("mediaId", post.mediaId);
+                context.startActivity(i);
+            }
+        });
+        holder.ibShare.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                PopupMenu popup = new PopupMenu(context, view);
+                // Inflate the menu from xml
+                popup.getMenuInflater().inflate(R.menu.popup_filter, popup.getMenu());
+                // Setup menu item selection
+                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                    public boolean onMenuItemClick(MenuItem item) {
+                        switch (item.getItemId()) {
+                            case R.id.menu_share:
+                                holder.ivImage.buildDrawingCache();
+                                Bitmap bitmap = holder.ivImage.getDrawingCache();
+
+                                String path = MediaStore.Images.Media.insertImage(context.getContentResolver(),
+                                        bitmap, "Image Description", null);
+                                Uri bmpUri = Uri.parse(path);
+                                Intent shareIntent = new Intent();
+                                shareIntent.setAction(Intent.ACTION_SEND);
+                                shareIntent.putExtra(Intent.EXTRA_STREAM, bmpUri);
+                                shareIntent.setType("image/*");
+                                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                context.startActivity(Intent.createChooser(shareIntent, "Share images..."));
+                                return true;
+                            default:
+                                return false;
+                        }
+                    }
+                });
+                // Handle dismissal with: popup.setOnDismissListener(...);
+                // Show the menu
+                popup.show();
+            }
+        });
+
+
+        List<InstagramComment> comments = post.comments;
+        holder.llComments.removeAllViews();
+        if (post.commentsCount == 1) {
+            ssb = new SpannableStringBuilder(post.comments.get(0).user.userName);
+            ssb.setSpan(blueForegroundColorSpan, 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ssb.setSpan(serifMediumTypeFaceSpan, 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ssb.append(" ");
+            ssb.append(post.comments.get(0).text);
+            View view = LayoutInflater.from(context).inflate(R.layout.item_text_comment, holder.llComments, false);
+            TextView tvComment = (TextView) view.findViewById(R.id.tvComment);
+            tvComment.setText(ssb, TextView.BufferType.NORMAL);
+            holder.llComments.addView(view);
+        } else if (post.commentsCount >= 2) {
+            for (int i = post.comments.size() - 1; i >= post.comments.size() - 2; i--) {
+                ssb = new SpannableStringBuilder(post.comments.get(0).user.userName);
+                ssb.setSpan(blueForegroundColorSpan, 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(serifMediumTypeFaceSpan, 0, ssb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.append(" ");
+                ssb.append(post.comments.get(i).text);
+                View view = LayoutInflater.from(context).inflate(R.layout.item_text_comment, holder.llComments, false);
+                TextView tvComment = (TextView) view.findViewById(R.id.tvComment);
+                tvComment.setText(ssb, TextView.BufferType.NORMAL);
+                holder.llComments.addView(view);
+            }
+        }
     }
 
     @Override
@@ -85,7 +163,9 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
         public SimpleDraweeView ivImage;
         public TextView tvLikesCount;
         public TextView tvCreatedTime;
-
+        public TextView tvCommentsCount;
+        public LinearLayout llComments;
+        public ImageButton ibShare;
 
         public InstagramPostsViewHolder(View itemView) {
             super(itemView);
@@ -95,6 +175,9 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
             tvCreatedTime = (TextView) itemView.findViewById(R.id.tvCreatedTime);
             ivAvatar = (SimpleDraweeView) itemView.findViewById(R.id.ivAvatar);
             ivImage = (SimpleDraweeView) itemView.findViewById(R.id.ivImage);
+            llComments = (LinearLayout) itemView.findViewById(R.id.llComments);
+            tvCommentsCount = (TextView) itemView.findViewById(R.id.tvCommentsCount);
+            ibShare = (ImageButton) itemView.findViewById(R.id.ibShare);
         }
     }
 }

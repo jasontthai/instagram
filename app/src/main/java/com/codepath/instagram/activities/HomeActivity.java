@@ -1,49 +1,57 @@
 package com.codepath.instagram.activities;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 import com.codepath.instagram.R;
 import com.codepath.instagram.helpers.SimpleVerticalSpacerItemDecoration;
 import com.codepath.instagram.helpers.Utils;
 import com.codepath.instagram.models.InstagramPost;
+import com.codepath.instagram.networking.InstagramClient;
 import com.facebook.drawee.backends.pipeline.Fresco;
+import com.loopj.android.http.JsonHttpResponseHandler;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 
+import cz.msebera.android.httpclient.Header;
 
 public class HomeActivity extends AppCompatActivity {
     private static final String TAG = "HomeActivity";
     private ArrayList<InstagramPost> posts;
+    private InstagramPostsAdapter adapter;
+    Context context = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         Fresco.initialize(this);
-        fetchPosts();
-
+        posts = new ArrayList<>();
         // Get RecyclerView Reference
         RecyclerView rvPosts = (RecyclerView) findViewById(R.id.rvPosts);
         RecyclerView.ItemDecoration itemDecoration = new
-                SimpleVerticalSpacerItemDecoration(24);
+                SimpleVerticalSpacerItemDecoration(12);
         rvPosts.addItemDecoration(itemDecoration);
         // Create Adapter
-        InstagramPostsAdapter adapter = new InstagramPostsAdapter(posts);
+        adapter = new InstagramPostsAdapter(posts);
 
         // Set Adapter
         rvPosts.setAdapter(adapter);
 
         // Set layout
         rvPosts.setLayoutManager(new LinearLayoutManager(this));
+
+        fetchPosts();
     }
 
     @Override
@@ -69,13 +77,31 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     private void fetchPosts() {
-        try {
-            JSONObject jsonObject = Utils.loadJsonFromAsset(this, "popular.json");
-            posts = (ArrayList) Utils.decodePostsFromJsonResponse(jsonObject);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        InstagramClient client = new InstagramClient();
+        client.getPopularFeed(new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                if (response != null) {
+                    posts.clear();
+                    posts.addAll(Utils.decodePostsFromJsonResponse(response));
+                    adapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                builder.setMessage("Error connecting to network")
+                        .setTitle("Network Error");
+                builder.create().show();
+            }
+
+
+        });
+    }
+
+    public void onCommentsCountClick(View view) {
+        Intent i = new Intent();
+
     }
 }
