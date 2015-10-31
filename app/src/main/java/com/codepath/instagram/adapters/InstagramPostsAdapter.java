@@ -1,4 +1,4 @@
-package com.codepath.instagram.activities;
+package com.codepath.instagram.adapters;
 
 import android.content.Context;
 import android.content.Intent;
@@ -21,6 +21,7 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.codepath.instagram.R;
+import com.codepath.instagram.activities.CommentsActivity;
 import com.codepath.instagram.helpers.Utils;
 import com.codepath.instagram.models.InstagramComment;
 import com.codepath.instagram.models.InstagramPost;
@@ -33,8 +34,8 @@ import java.util.List;
  * Created by trit on 10/26/15.
  */
 public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAdapter.InstagramPostsViewHolder> {
-    private ArrayList<InstagramPost> posts;
-    Context context;
+    private static ArrayList<InstagramPost> posts;
+    private static Context context;
 
     public InstagramPostsAdapter(ArrayList<InstagramPost> posts) {
         this.posts = posts;
@@ -80,49 +81,9 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
         holder.ivImage.setImageURI(Uri.parse(post.image.imageUrl));
         holder.ivImage.setAspectRatio((float) post.image.imageWidth / post.image.imageHeight);
         holder.tvCommentsCount.setText("View all " + post.commentsCount + " comments");
-        holder.tvCommentsCount.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent i = new Intent(context, CommentsActivity.class);
-                i.putExtra("mediaId", post.mediaId);
-                context.startActivity(i);
-            }
-        });
-        holder.ibShare.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                PopupMenu popup = new PopupMenu(context, view);
-                // Inflate the menu from xml
-                popup.getMenuInflater().inflate(R.menu.popup_filter, popup.getMenu());
-                // Setup menu item selection
-                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    public boolean onMenuItemClick(MenuItem item) {
-                        switch (item.getItemId()) {
-                            case R.id.menu_share:
-                                holder.ivImage.buildDrawingCache();
-                                Bitmap bitmap = holder.ivImage.getDrawingCache();
-
-                                String path = MediaStore.Images.Media.insertImage(context.getContentResolver(),
-                                        bitmap, "Image Description", null);
-                                Uri bmpUri = Uri.parse(path);
-                                Intent shareIntent = new Intent();
-                                shareIntent.setAction(Intent.ACTION_SEND);
-                                shareIntent.putExtra(Intent.EXTRA_STREAM, bmpUri);
-                                shareIntent.setType("image/*");
-                                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                                context.startActivity(Intent.createChooser(shareIntent, "Share images..."));
-                                return true;
-                            default:
-                                return false;
-                        }
-                    }
-                });
-                // Handle dismissal with: popup.setOnDismissListener(...);
-                // Show the menu
-                popup.show();
-            }
-        });
-
+        if (post.commentsCount <= 2) {
+            holder.tvCommentsCount.setVisibility(View.INVISIBLE);
+        }
 
         List<InstagramComment> comments = post.comments;
         holder.llComments.removeAllViews();
@@ -178,6 +139,54 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
             llComments = (LinearLayout) itemView.findViewById(R.id.llComments);
             tvCommentsCount = (TextView) itemView.findViewById(R.id.tvCommentsCount);
             ibShare = (ImageButton) itemView.findViewById(R.id.ibShare);
+            setUpListeners();
+        }
+
+        private void setUpListeners() {
+            tvCommentsCount.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Context context = view.getContext();
+                    Intent i = new Intent(context, CommentsActivity.class);
+                    i.putExtra("mediaId", posts.get(getPosition()).mediaId);
+                    context.startActivity(i);
+                }
+            });
+            ibShare.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    final Context context = view.getContext();
+                    PopupMenu popup = new PopupMenu(context, view);
+                    // Inflate the menu from xml
+                    popup.getMenuInflater().inflate(R.menu.popup_filter, popup.getMenu());
+                    // Setup menu item selection
+                    popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                        public boolean onMenuItemClick(MenuItem item) {
+                            switch (item.getItemId()) {
+                                case R.id.menu_share:
+                                    ivImage.buildDrawingCache();
+                                    Bitmap bitmap = ivImage.getDrawingCache();
+
+                                    String path = MediaStore.Images.Media.insertImage(context.getContentResolver(),
+                                            bitmap, "Image Description", null);
+                                    Uri bmpUri = Uri.parse(path);
+                                    Intent shareIntent = new Intent();
+                                    shareIntent.setAction(Intent.ACTION_SEND);
+                                    shareIntent.putExtra(Intent.EXTRA_STREAM, bmpUri);
+                                    shareIntent.setType("image/*");
+                                    shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share images..."));
+                                    return true;
+                                default:
+                                    return false;
+                            }
+                        }
+                    });
+                    // Handle dismissal with: popup.setOnDismissListener(...);
+                    // Show the menu
+                    popup.show();
+                }
+            });
         }
     }
 }

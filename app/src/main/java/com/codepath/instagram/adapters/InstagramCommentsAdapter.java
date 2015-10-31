@@ -1,4 +1,4 @@
-package com.codepath.instagram.activities;
+package com.codepath.instagram.adapters;
 
 import android.content.Context;
 import android.net.Uri;
