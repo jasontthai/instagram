@@ -81,7 +81,9 @@ public class InstagramPostsAdapter extends RecyclerView.Adapter<InstagramPostsAd
         holder.ivImage.setImageURI(Uri.parse(post.image.imageUrl));
         holder.ivImage.setAspectRatio((float) post.image.imageWidth / post.image.imageHeight);
         holder.tvCommentsCount.setText("View all " + post.commentsCount + " comments");
-        if (post.commentsCount <= 2) {
+        if (post.commentsCount == 0) {
+            holder.tvCommentsCount.setVisibility(View.GONE);
+        } else if(post.commentsCount <= 2) {
             holder.tvCommentsCount.setVisibility(View.INVISIBLE);
         }
 
