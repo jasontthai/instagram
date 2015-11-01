@@ -12,7 +12,7 @@ Completed user stories:
  * [x] Required: User can view their own feed.
  * [x] Required: User can search for a user by username.
  * [x] Required: User can search for a tag.
- * [] Optional: Include a ProgressBar during network loading.
+ * [x] Optional: Include a ProgressBar during network loading.
  * [x] Optional: User can get a grid of photos by clicking on a search result (i.e. a user or tag).
 
 ## Video Walkthrough 
