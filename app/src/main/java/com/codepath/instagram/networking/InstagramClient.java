@@ -27,6 +27,8 @@ public class InstagramClient extends OAuthBaseClient {
     private static final String USER_FEED_URL = "users/self/feed/";
     private static final String USERS_SEARCH_URL = "users/search";
     private static final String TAGS_SEARCH_URL = "tags/search";
+    private static final String USER_RECENT_FEED_URL = "users/{0}/media/recent";
+    private static final String TAG_RECENT_FEED_URL = "tags/{0}/media/recent";
 
     public InstagramClient(Context context) {
         super(context, REST_API_CLASS, REST_URL, REST_CONSUMER_KEY, REST_CONSUMER_SECRET, Constants.REDIRECT_URI, Constants.SCOPE);
@@ -58,6 +60,18 @@ public class InstagramClient extends OAuthBaseClient {
         RequestParams params = getDefaultRequestParams();
         params.put("q", searchTerm);
         client.get(getApiUrl(TAGS_SEARCH_URL), params, responseHandler);
+    }
+
+    public void getTagRecentMedia(String tag, JsonHttpResponseHandler responseHandler) {
+        RequestParams params = getDefaultRequestParams();
+        params.put("access_token", client.getAccessToken().getToken());
+        client.get(getApiUrl(MessageFormat.format(TAG_RECENT_FEED_URL, tag)), params, responseHandler);
+    }
+
+    public void getUserRecentMedia(String userId, JsonHttpResponseHandler responseHandler) {
+        RequestParams params = getDefaultRequestParams();
+        params.put("access_token", client.getAccessToken().getToken());
+        client.get(getApiUrl(MessageFormat.format(USER_RECENT_FEED_URL, userId)), params, responseHandler);
     }
 
     private static RequestParams getDefaultRequestParams() {
