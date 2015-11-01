@@ -68,7 +68,6 @@ public class SearchFragment extends Fragment {
                 searchView.setQuery("", false);
                 searchView.setIconified(true);
                 searchItem.collapseActionView();
-
                 if (fragmentStatePagerAdapter != null) {
                     SearchUsersResultFragment usersResultFragment =
                             (SearchUsersResultFragment) fragmentStatePagerAdapter.getRegisteredFragment(0);

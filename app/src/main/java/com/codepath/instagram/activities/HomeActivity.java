@@ -17,7 +17,6 @@ public class HomeActivity extends AppCompatActivity {
     public static String POSITION = "POSITION";
     private TabLayout tabLayout;
     private ViewPager viewPager;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

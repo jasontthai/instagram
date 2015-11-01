@@ -10,6 +10,9 @@ import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -33,6 +36,8 @@ import cz.msebera.android.httpclient.Header;
 public class PostsFragment extends Fragment {
     private ArrayList<InstagramPost> posts;
     private InstagramPostsAdapter adapter;
+    // Instance of the progress action-view
+    MenuItem miActionProgressItem;
 
     public static PostsFragment newInstance() {
         return new PostsFragment();
@@ -40,6 +45,12 @@ public class PostsFragment extends Fragment {
 
     public PostsFragment() {
         // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
     }
 
     @Nullable
@@ -66,6 +77,7 @@ public class PostsFragment extends Fragment {
     }
 
     private void fetchPosts(final View view) {
+        showProgressBar();
         if (!isNetworkAvailable()) {
             AlertDialog.Builder builder = new AlertDialog.Builder(view.getContext());
             builder.setMessage("Error connecting to network")
@@ -73,8 +85,7 @@ public class PostsFragment extends Fragment {
             builder.create().show();
             return;
         }
-
-        MainApplication.getRestClient().getUserFeed(new JsonHttpResponseHandler() {
+        MainApplication.getRestClient().getPopularFeed(new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                 if (response != null) {
@@ -82,6 +93,7 @@ public class PostsFragment extends Fragment {
                     posts.addAll(Utils.decodePostsFromJsonResponse(response));
                     adapter.notifyDataSetChanged();
                 }
+                hideProgressBar();
             }
 
             @Override
@@ -99,5 +111,26 @@ public class PostsFragment extends Fragment {
                 = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting();
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        // Inflate the menu; this adds items to the action bar.
+        inflater.inflate(R.menu.menu_home, menu);
+        miActionProgressItem = menu.findItem(R.id.miActionProgress);
+    }
+
+    public void showProgressBar() {
+        // Show progress item
+        if (miActionProgressItem != null) {
+            miActionProgressItem.setVisible(true);
+        }
+    }
+
+    public void hideProgressBar() {
+        // Hide progress item
+        if (miActionProgressItem != null) {
+            miActionProgressItem.setVisible(false);
+        }
     }
 }
