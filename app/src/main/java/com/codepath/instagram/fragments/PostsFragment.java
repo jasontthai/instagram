@@ -85,7 +85,7 @@ public class PostsFragment extends Fragment {
             builder.create().show();
             return;
         }
-        MainApplication.getRestClient().getPopularFeed(new JsonHttpResponseHandler() {
+        MainApplication.getRestClient().getUserFeed(new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                 if (response != null) {
