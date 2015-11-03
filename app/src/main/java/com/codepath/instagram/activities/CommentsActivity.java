@@ -42,8 +42,6 @@ public class CommentsActivity extends AppCompatActivity {
 
         String mediaId = getIntent().getStringExtra("mediaId");
         fetchComments(mediaId);
-
-        getSupportActionBar().setTitle(getResources().getString(R.string.comments));
     }
 
     @Override

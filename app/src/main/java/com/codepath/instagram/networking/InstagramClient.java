@@ -7,6 +7,7 @@ import com.codepath.instagram.helpers.Constants;
 import com.codepath.oauth.OAuthBaseClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
 import com.loopj.android.http.RequestParams;
+import com.loopj.android.http.SyncHttpClient;
 
 import org.scribe.builder.api.Api;
 
@@ -30,6 +31,8 @@ public class InstagramClient extends OAuthBaseClient {
     private static final String USER_RECENT_FEED_URL = "users/{0}/media/recent";
     private static final String TAG_RECENT_FEED_URL = "tags/{0}/media/recent";
 
+    private static SyncHttpClient syncHttpClient = new SyncHttpClient();
+
     public InstagramClient(Context context) {
         super(context, REST_API_CLASS, REST_URL, REST_CONSUMER_KEY, REST_CONSUMER_SECRET, Constants.REDIRECT_URI, Constants.SCOPE);
     }
@@ -43,6 +46,13 @@ public class InstagramClient extends OAuthBaseClient {
         String url = getApiUrl(USER_FEED_URL);
         RequestParams params = new RequestParams("access_token", client.getAccessToken().getToken());
         client.get(url, params, responseHandler);
+    }
+
+    public void getUserFeedSynchronously(JsonHttpResponseHandler responseHandler) {
+        String url = getApiUrl(USER_FEED_URL);
+        RequestParams params = getDefaultRequestParams();
+        params.put("access_token", client.getAccessToken().getToken());
+        syncHttpClient.get(url, params, responseHandler);
     }
 
     public void getUserSearch(String searchTerm, JsonHttpResponseHandler responseHandler) {
@@ -76,7 +86,7 @@ public class InstagramClient extends OAuthBaseClient {
         client.get(getApiUrl(MessageFormat.format(USER_RECENT_FEED_URL, userId)), params, responseHandler);
     }
 
-    private static RequestParams getDefaultRequestParams() {
+    public static RequestParams getDefaultRequestParams() {
         RequestParams params = new RequestParams();
         params.put("client_id", REST_CONSUMER_KEY);
         return params;

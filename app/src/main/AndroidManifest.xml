@@ -42,8 +42,9 @@
         </activity>
         <activity
             android:name=".activities.PhotoGridActivity"
-            android:label="Photos">
+            android:label="@string/title_activity_photo_grid">
         </activity>
+        <service android:name=".services.InstagramIntentService"></service>
     </application>
 
 </manifest>

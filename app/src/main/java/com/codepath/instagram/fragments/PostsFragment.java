@@ -1,12 +1,16 @@
 package com.codepath.instagram.fragments;
 
-import android.app.AlertDialog;
+import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -18,17 +22,13 @@ import android.view.ViewGroup;
 
 import com.codepath.instagram.R;
 import com.codepath.instagram.adapters.InstagramPostsAdapter;
-import com.codepath.instagram.core.MainApplication;
 import com.codepath.instagram.helpers.SimpleVerticalSpacerItemDecoration;
-import com.codepath.instagram.helpers.Utils;
 import com.codepath.instagram.models.InstagramPost;
-import com.loopj.android.http.JsonHttpResponseHandler;
-
-import org.json.JSONObject;
+import com.codepath.instagram.models.InstagramPosts;
+import com.codepath.instagram.persistence.InstagramClientDatabase;
+import com.codepath.instagram.services.InstagramIntentService;
 
 import java.util.ArrayList;
-
-import cz.msebera.android.httpclient.Header;
 
 /**
  * Created by trit on 10/30/15.
@@ -38,6 +38,24 @@ public class PostsFragment extends Fragment {
     private InstagramPostsAdapter adapter;
     // Instance of the progress action-view
     MenuItem miActionProgressItem;
+    private SwipeRefreshLayout swipeContainer;
+    private InstagramClientDatabase database;
+
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int resultCode = intent.getIntExtra(InstagramIntentService.KEY_RESULT_CODE, Activity.RESULT_CANCELED);
+            if (resultCode == Activity.RESULT_OK) {
+                // Extract the json string from the bundle and save it to SharedPreferences.
+                InstagramPosts instagramPosts = (InstagramPosts)intent.getSerializableExtra(InstagramIntentService.KEY_RESULTS);
+                posts = (ArrayList<InstagramPost>) instagramPosts.posts;
+                adapter.addAll(posts);
+
+                database.emptyAllTables();
+                database.addInstagramPosts(posts);
+            }
+        }
+    };
 
     public static PostsFragment newInstance() {
         return new PostsFragment();
@@ -53,10 +71,9 @@ public class PostsFragment extends Fragment {
         setHasOptionsMenu(true);
     }
 
-    @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_posts, container, false);
+        final View view = inflater.inflate(R.layout.fragment_posts, container, false);
 
         posts = new ArrayList<>();
         // Get RecyclerView Reference
@@ -72,38 +89,56 @@ public class PostsFragment extends Fragment {
 
         // Set layout
         rvPosts.setLayoutManager(new LinearLayoutManager(view.getContext()));
+
+        swipeContainer = (SwipeRefreshLayout) view.findViewById(R.id.swipeContainer);
+
+        // Setup refresh listener which triggers new data loading
+        swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                // Your code to refresh the list here.
+                // Make sure you call swipeContainer.setRefreshing(false)
+                // once the network request has completed successfully.
+                fetchPosts(view);
+            }
+        });
+
+        // Configure the refreshing colors
+        swipeContainer.setColorSchemeResources(android.R.color.holo_blue_bright,
+                android.R.color.holo_green_light,
+                android.R.color.holo_orange_light,
+                android.R.color.holo_red_light);
+
+        database = InstagramClientDatabase.getInstance(view.getContext());
         fetchPosts(view);
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter(InstagramIntentService.ACTION);
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(receiver, filter);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(receiver);
     }
 
     private void fetchPosts(final View view) {
         showProgressBar();
         if (!isNetworkAvailable()) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(view.getContext());
-            builder.setMessage("Error connecting to network")
-                    .setTitle("Network Error");
-            builder.create().show();
-            return;
-        }
-        MainApplication.getRestClient().getUserFeed(new JsonHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-                if (response != null) {
-                    posts.clear();
-                    posts.addAll(Utils.decodePostsFromJsonResponse(response));
-                    adapter.notifyDataSetChanged();
-                }
-                hideProgressBar();
-            }
+            posts = (ArrayList<InstagramPost>) database.getAllInstagramPosts();
+            adapter.addAll(posts);
+        } else {
+            Intent i = new Intent(getActivity(), InstagramIntentService.class);
+            getActivity().startService(i);
 
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(view.getContext());
-                builder.setMessage("Error connecting to network")
-                        .setTitle("Network Error");
-                builder.create().show();
-            }
-        });
+        }
+        swipeContainer.setRefreshing(false);
+        hideProgressBar();
     }
 
     private boolean isNetworkAvailable() {
